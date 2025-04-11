@@ -7,8 +7,8 @@ export default function App() {
   const [exclude, setExclude] = useState("");
   const [loading, setLoading] = useState(false);
   const [useFullRange, setUseFullRange] = useState(true);
-  const [startId, setStartId] = useState(40000);
-  const [endId, setEndId] = useState(40100);
+  const [startId, setStartId] = useState(19500);
+  const [endId, setEndId] = useState(22000);
 
   const navigate = useNavigate();
   const days = Array.from({ length: 31 }, (_, i) => `${String(i + 1).padStart(2, "0")}일`);
