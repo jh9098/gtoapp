@@ -1,27 +1,36 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from crawler import run_crawler_streaming
+from datetime import datetime
 import json
 import asyncio
-from datetime import datetime
-from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
+# ✅ CORS 미들웨어 설정
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://dbgapp.netlify.app", 
-        "https://gtoapp.netlify.app"  # ✅ 새 프론트엔드 주소 추가
+        "https://dbgapp.netlify.app",
+        "https://gtoapp.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-active_sessions = {}  # session_cookie: [websocket, websocket, ...]
-ongoing_tasks = {}    # session_cookie: asyncio.Task
-session_results = {}  # session_cookie: {"hidden": [...], "public": [...], "all": set()}
+# ✅ 모든 HTTP 응답에 CORS 헤더 강제 추가
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "https://gtoapp.netlify.app"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+# === 실시간 연결 상태 저장 ===
+active_sessions = {}
+ongoing_tasks = {}
+session_results = {}
 
 @app.websocket("/ws/crawl")
 async def websocket_endpoint(websocket: WebSocket):
@@ -50,13 +59,11 @@ async def websocket_endpoint(websocket: WebSocket):
             active_sessions[session_cookie] = []
         active_sessions[session_cookie].append(websocket)
 
-        # 새로 접속한 클라이언트에게 이전 결과 먼저 전송
         for h in session_results[session_cookie]["hidden"]:
             await websocket.send_text(json.dumps({"event": "hidden", "data": h}))
         for p in session_results[session_cookie]["public"]:
             await websocket.send_text(json.dumps({"event": "public", "data": p}))
 
-        # 크롤링 태스크가 없으면 시작
         if session_cookie not in ongoing_tasks:
             task = asyncio.create_task(
                 stream_to_all_clients(session_cookie, {
@@ -102,7 +109,7 @@ async def stream_to_all_clients(session_cookie: str, data: dict):
                         csq = None
 
             if csq and csq in results["all"]:
-                continue  # 중복 방지
+                continue
             if csq:
                 results["all"].add(csq)
 
@@ -132,27 +139,10 @@ async def stream_to_all_clients(session_cookie: str, data: dict):
             except:
                 pass
 
+# ✅ 저장된 결과 조회
 @app.get("/api/results")
-async def get_saved_results(session_cookie: str, request: Request):
+async def get_saved_results(session_cookie: str):
     data = session_results.get(session_cookie)
-    
     if not data:
-        return JSONResponse(
-            content={"status": "not_found", "message": "결과가 없습니다"},
-            headers={
-                "Access-Control-Allow-Origin": "https://gtoapp.netlify.app",  # 강제 허용
-                "Access-Control-Allow-Credentials": "true"
-            }
-        )
-
-    return JSONResponse(
-        content={
-            "status": "ok",
-            "hidden": data["hidden"],
-            "public": data["public"]
-        },
-        headers={
-            "Access-Control-Allow-Origin": "https://gtoapp.netlify.app",  # 강제 허용
-            "Access-Control-Allow-Credentials": "true"
-        }
-    )
+        return {"status": "not_found", "message": "결과가 없습니다"}
+    return {"status": "ok", "hidden": data["hidden"], "public": data["public"]}
