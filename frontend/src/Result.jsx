@@ -3,8 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 export default function Result() {
   const navigate = useNavigate();
-  const [hiddenResults, setHiddenResults] = useState([]);
-  const [publicResults, setPublicResults] = useState([]);
+  const [hiddenResults, setHiddenResults] = useState(
+    JSON.parse(localStorage.getItem("hiddenResults") || "[]")
+  );
+  const [publicResults, setPublicResults] = useState(
+    JSON.parse(localStorage.getItem("publicResults") || "[]")
+  );
   const [filter, setFilter] = useState({ hidden: "", public: "" });
   const [status, setStatus] = useState("⏳ 결과를 불러오는 중...");
   const [retryCount, setRetryCount] = useState(0);
@@ -20,17 +24,20 @@ export default function Result() {
     return match ? match[1] : null;
   };
 
-  const insertUniqueSorted = (arr, newItem) => {
+  const insertUniqueSorted = (arr, newItem, isHidden) => {
     const csq = getCsq(newItem);
     if (!csq || fetchedCsq.current.has(csq)) return arr;
     fetchedCsq.current.add(csq);
     const filtered = arr.filter((item) => getCsq(item) !== csq);
     filtered.push(newItem);
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       const timeA = a.split(" & ")[4];
       const timeB = b.split(" & ")[4];
       return timeA.localeCompare(timeB);
     });
+    const key = isHidden ? "hiddenResults" : "publicResults";
+    localStorage.setItem(key, JSON.stringify(sorted));
+    return sorted;
   };
 
   const downloadTxt = (data, filename) => {
@@ -78,24 +85,17 @@ export default function Result() {
       setRange({ start: parseInt(start_id), end: parseInt(end_id) });
     }
 
-    fetch(`https://gtoapp.onrender.com/api/results?session_cookie=${session_cookie}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("API 응답 오류");
-        return res.json();
-      })
+    fetch(`https://campaign-crawler-app.onrender.com/api/results?session_cookie=${session_cookie}`)
+      .then((res) => res.ok ? res.json() : Promise.reject("API 오류"))
       .then((data) => {
         if (data.status === "ok") {
-          setHiddenResults(data.hidden);
-          setPublicResults(data.public);
-          const allCsqs = [...data.hidden, ...data.public].map(getCsq).filter(Boolean);
-          fetchedCsq.current = new Set(allCsqs);
           setStatus(realtime ? "📦 저장된 결과 불러옴, 실시간 연결 중..." : "📦 저장된 결과 불러왔습니다");
         } else {
           setStatus("❌ 저장된 결과가 없습니다");
         }
 
         if (realtime) {
-          const socket = new WebSocket("wss://gtoapp.onrender.com/ws/crawl");
+          const socket = new WebSocket("wss://campaign-crawler-app.onrender.com/ws/crawl");
           socketRef.current = socket;
 
           socket.onopen = () => {
@@ -110,9 +110,9 @@ export default function Result() {
             const { event: type, data } = message;
 
             if (type === "hidden") {
-              setHiddenResults((prev) => insertUniqueSorted(prev, data));
+              setHiddenResults((prev) => insertUniqueSorted(prev, data, true));
             } else if (type === "public") {
-              setPublicResults((prev) => insertUniqueSorted(prev, data));
+              setPublicResults((prev) => insertUniqueSorted(prev, data, false));
             } else if (type === "done") {
               setStatus("✅ 데이터 수신 완료");
               socket.close();
@@ -139,7 +139,8 @@ export default function Result() {
             if (!manualClose.current && retryCount < 5) {
               reconnectTimeout.current = setTimeout(() => {
                 setRetryCount((prev) => prev + 1);
-                window.location.reload(); // 재실행 위해 새로고침
+                setStatus("🔄 재연결 중...");
+                window.location.reload();
               }, 2000);
             } else {
               setStatus("🔌 연결이 종료되었습니다");
@@ -147,9 +148,7 @@ export default function Result() {
           };
         }
       })
-      .catch((err) => {
-        setStatus("❌ API 호출 실패: " + err.message);
-      });
+      .catch((err) => setStatus("❌ API 호출 실패: " + err));
 
     return () => {
       manualClose.current = true;
@@ -167,6 +166,8 @@ export default function Result() {
       setData((prev) => {
         const updated = [...prev];
         updated.splice(idxToDelete, 1);
+        const key = isHidden ? "hiddenResults" : "publicResults";
+        localStorage.setItem(key, JSON.stringify(updated));
         return updated;
       });
     };
