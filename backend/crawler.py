@@ -122,3 +122,19 @@ async def run_crawler_streaming(session_cookie, selected_days, exclude_keywords,
             return
 
     for cid in range(start_id, end_id + 1):
+        if cid in exclude_ids:
+            continue
+
+        result = await asyncio.to_thread(
+            fetch_campaign_data,
+            cid, session, public_campaigns, selected_days, exclude_keywords
+        )
+        if result:
+            h, p = result
+            if h:
+                yield {"event": "hidden", "data": h}
+            if p:
+                yield {"event": "public", "data": p}
+
+    yield {"event": "done", "data": "크롤링 완료"}
+
