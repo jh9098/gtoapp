@@ -16,7 +16,8 @@ def get_public_campaigns(session):
         try:
             response = session.get(MAIN_URL, verify=False, timeout=10)
             response.raise_for_status()
-            scripts = BeautifulSoup(response.text, "html.parser").find_all("script")
+            soup = BeautifulSoup(response.text, "html.parser")
+            scripts = soup.find_all("script")
             for script in scripts:
                 matches = re.findall(r'data-csq=["\']?(\d+)', script.text)
                 public_campaigns.update(map(int, matches))
@@ -37,15 +38,10 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
             return None
 
         participation_time = soup.find("button", class_="butn butn-success", disabled=True)
-        participation_time = participation_time.text.strip() if participation_time else ""
+        participation_time = participation_time.text.strip() if participation_time else "참여 가능 시간 없음"
+
         if "시에" in participation_time:
             participation_time = participation_time.replace("시에", "시 00분에")
-
-        product_name_tag = soup.find("h3")
-        product_name = product_name_tag.text.strip().replace("&", "") if product_name_tag else "상품명 없음"
-
-        #print(f"🔍 캠페인 {campaign_id} 참여 시간: {participation_time}")
-        #print(f"🔍 상품명: {product_name}")
 
         day_match = re.search(r"(\d{2})일", participation_time)
         if not day_match or day_match.group(0) not in selected_days:
@@ -56,6 +52,9 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
            soup.find("button", string="참여 가능 시간이 아닙니다") or \
            soup.find("button", string="캠페인 참여"):
             return None
+
+        product_name_tag = soup.find("h3")
+        product_name = product_name_tag.text.strip().replace("&", "") if product_name_tag else "상품명 없음"
 
         if any(keyword in product_name for keyword in exclude_keywords):
             return None
@@ -84,16 +83,20 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
                 shop_name = shop_img["alt"].strip()
 
         text_review = "포토 리뷰"
-        if soup.find("label", string="텍스트 리뷰"):
+        if soup.find("label", class_="form-check-label", string="텍스트 리뷰"):
             text_review = "텍스트 리뷰"
 
         if price != "가격 정보 없음":
             price_num = int(price)
-            
+            if "기타배송" in product_type and "스마트스토어" in shop_name and price_num < 90000:
+                return None
+            if "기타배송" in product_type and "쿠팡" in shop_name and price_num < 28500:
+                return None
+            if "실배송" in product_type and price_num < 8500:
+                return None
 
         result = f"{product_type} & {text_review} & {shop_name} & {price} & {participation_time} & {product_name} & {url}"
         return (None, result) if campaign_id in public_campaigns else (result, None)
-        print(f"결과 {result}")
     except requests.exceptions.RequestException:
         return None
 
@@ -118,22 +121,4 @@ async def run_crawler_streaming(session_cookie, selected_days, exclude_keywords,
             yield {"event": "error", "data": "수동 범위 사용 시 start_id, end_id는 필수입니다."}
             return
 
-    print(f"📡 실행할 캠페인 범위: {start_id} ~ {end_id}")
-
     for cid in range(start_id, end_id + 1):
-        if cid in exclude_ids:
-            continue
-
-        result = await asyncio.to_thread(
-            fetch_campaign_data,
-            cid, session, public_campaigns, selected_days, exclude_keywords
-        )
-        if result:
-            h, p = result
-            if h:
-                yield {"event": "hidden", "data": h}
-            if p:
-                yield {"event": "public", "data": p}
-
-    yield {"event": "done", "data": "크롤링 완료"}
-
