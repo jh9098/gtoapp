@@ -9,7 +9,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://gtoapp.netlify.app"],
+    allow_origins=[
+        "https://dbgapp.netlify.app", 
+        "https://gtoapp.netlify.app"  # ✅ 새 프론트엔드 주소 추가
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
