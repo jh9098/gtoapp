@@ -4,6 +4,7 @@ from crawler import run_crawler_streaming
 import json
 import asyncio
 from datetime import datetime
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -132,8 +133,26 @@ async def stream_to_all_clients(session_cookie: str, data: dict):
                 pass
 
 @app.get("/api/results")
-async def get_saved_results(session_cookie: str):
+async def get_saved_results(session_cookie: str, request: Request):
     data = session_results.get(session_cookie)
+    
     if not data:
-        return {"status": "not_found", "message": "결과가 없습니다"}
-    return {"status": "ok", "hidden": data["hidden"], "public": data["public"]}
+        return JSONResponse(
+            content={"status": "not_found", "message": "결과가 없습니다"},
+            headers={
+                "Access-Control-Allow-Origin": "https://gtoapp.netlify.app",  # 강제 허용
+                "Access-Control-Allow-Credentials": "true"
+            }
+        )
+
+    return JSONResponse(
+        content={
+            "status": "ok",
+            "hidden": data["hidden"],
+            "public": data["public"]
+        },
+        headers={
+            "Access-Control-Allow-Origin": "https://gtoapp.netlify.app",  # 강제 허용
+            "Access-Control-Allow-Credentials": "true"
+        }
+    )
