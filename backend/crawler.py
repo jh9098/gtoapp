@@ -68,13 +68,6 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
                 price_value = re.sub(r"[^\d]", "", price_text.text)
                 price = price_value if price_value else price
 
-        tobagi_points = "0 P"
-        point_tag = soup.find(string=re.compile("또바기 포인트"))
-        if point_tag:
-            pt = point_tag.find_next("div", style="text-align:right")
-            if pt:
-                tobagi_points = pt.text.strip()
-
         product_type = "상품구분 없음"
         for section in soup.find_all("div", class_="row col-sm4 col-12"):
             title = section.find("div", class_="col-6")
@@ -103,7 +96,7 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
             if "실배송" in product_type and price_num < 8500:
                 return None
 
-        result = f"{product_type} & {text_review} & {shop_name} & {price} & {tobagi_points} & {participation_time} & {product_name} & {url}"
+        result = f"{product_type} & {text_review} & {shop_name} & {price} & {participation_time} & {product_name} & {url}"
         return (None, result) if campaign_id in public_campaigns else (result, None)
         print(f"결과 {result}")
     except requests.exceptions.RequestException:
