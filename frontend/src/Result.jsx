@@ -85,7 +85,7 @@ export default function Result() {
       setRange({ start: parseInt(start_id), end: parseInt(end_id) });
     }
 
-    fetch(`https://campaign-crawler-app.onrender.com/api/results?session_cookie=${session_cookie}`)
+    fetch(`https://gtoapp.onrender.com/api/results?session_cookie=${session_cookie}`)
       .then((res) => res.ok ? res.json() : Promise.reject("API 오류"))
       .then((data) => {
         if (data.status === "ok") {
@@ -95,7 +95,7 @@ export default function Result() {
         }
 
         if (realtime) {
-          const socket = new WebSocket("wss://campaign-crawler-app.onrender.com/ws/crawl");
+          const socket = new WebSocket("wss://gtoapp.onrender.com/ws/crawl");
           socketRef.current = socket;
 
           socket.onopen = () => {
