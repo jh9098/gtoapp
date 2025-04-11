@@ -214,7 +214,6 @@ export default function Result() {
                   <td>{review}</td>
                   <td>{mall}</td>
                   <td>{Number(price.replace(/[^\d]/g, "")).toLocaleString("ko-KR")}</td>
-                  <td>{point}</td>
                   <td>{time}</td>
                   <td>{name}</td>
                   <td><a href={url} target="_blank" rel="noreferrer">바로가기</a></td>
