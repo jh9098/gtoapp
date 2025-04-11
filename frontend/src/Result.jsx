@@ -27,8 +27,8 @@ export default function Result() {
     const filtered = arr.filter((item) => getCsq(item) !== csq);
     filtered.push(newItem);
     return filtered.sort((a, b) => {
-      const timeA = a.split(" & ")[5];
-      const timeB = b.split(" & ")[5];
+      const timeA = a.split(" & ")[4];
+      const timeB = b.split(" & ")[4];
       return timeA.localeCompare(timeB);
     });
   };
@@ -203,7 +203,7 @@ export default function Result() {
           </thead>
           <tbody>
             {filtered.map((row, idx) => {
-              const [type, review, mall, price, point, time, name, url] = row.split(" & ");
+              const [type, review, mall, price, time, name, url] = row.split(" & ");
               const csq = getCsq(url) || "-";
               const realIndex = data.findIndex((item) => item === row);
               return (
