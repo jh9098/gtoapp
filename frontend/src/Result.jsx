@@ -195,7 +195,6 @@ export default function Result() {
               <th>리뷰</th>
               <th>쇼핑몰</th>
               <th>가격</th>
-              <th>포인트</th>
               <th>시간</th>
               <th>상품명</th>
               <th>링크</th>
