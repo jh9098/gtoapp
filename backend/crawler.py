@@ -7,8 +7,8 @@ import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-MAIN_URL = "https://dbg.shopreview.co.kr/usr"
-CAMPAIGN_URL_TEMPLATE = "https://dbg.shopreview.co.kr/usr/campaign_detail?csq={}"
+MAIN_URL = "https://gto.shopreview.co.kr/usr"
+CAMPAIGN_URL_TEMPLATE = "https://gto.shopreview.co.kr/usr/campaign_detail?csq={}"
 
 def get_public_campaigns(session):
     public_campaigns = set()
