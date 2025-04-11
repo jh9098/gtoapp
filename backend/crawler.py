@@ -89,12 +89,7 @@ def fetch_campaign_data(campaign_id, session, public_campaigns, selected_days, e
 
         if price != "가격 정보 없음":
             price_num = int(price)
-            if "기타배송" in product_type and "스마트스토어" in shop_name and price_num < 90000:
-                return None
-            if "기타배송" in product_type and "쿠팡" in shop_name and price_num < 28500:
-                return None
-            if "실배송" in product_type and price_num < 8500:
-                return None
+            
 
         result = f"{product_type} & {text_review} & {shop_name} & {price} & {participation_time} & {product_name} & {url}"
         return (None, result) if campaign_id in public_campaigns else (result, None)
